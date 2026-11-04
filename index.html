@@ -1363,12 +1363,12 @@ import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot
 
 // La configuración de Firebase va en el archivo firebase-config.js, junto a este index.html.
 // Si ese archivo no existe, se usan estos valores de ejemplo y la página pedirá la configuración.
-//let firebaseConfig = {
-  //apiKey: "PEGA_AQUI_TU_API_KEY",
-  //authDomain: "TU_PROYECTO.firebaseapp.com",
-  //projectId: "TU_PROYECTO",
-  //appId: "PEGA_AQUI_TU_APP_ID"
-//};
+let firebaseConfig = {
+  apiKey: "PEGA_AQUI_TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO",
+  appId: "PEGA_AQUI_TU_APP_ID"
+};
 try {
   const cfg = await import('./firebase-config.js');
   if (cfg && cfg.default) firebaseConfig = cfg.default;
