@@ -402,6 +402,8 @@ input[type="date"]::-webkit-datetime-edit { padding: 0; }
 .descbtn.none { color: var(--muted); }
 .descedit { display: block; width: 100%; min-height: 64px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 16px; resize: vertical; }
 .savestate { margin-top: 4px; min-height: 16px; font-size: 12px; color: var(--muted); }
+.more { display: block; width: 100%; margin-top: 12px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer; }
+.more:hover { background: var(--accent-soft); }
 .who { color: var(--muted); font-size: 13px; margin-top: 6px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; font: inherit; cursor: pointer; }
 .gate { min-height: 70vh; display: grid; place-items: center; }
@@ -462,6 +464,7 @@ input[type="date"]::-webkit-datetime-edit { padding: 0; }
     </div>
     <ul class="rows" id="rows"></ul>
     <p class="empty" id="empty" hidden></p>
+    <button type="button" class="more" id="moreBtn" hidden>Mostrar más</button>
   </section>
 
   <section aria-labelledby="ledgerTitle">
@@ -565,7 +568,7 @@ window.startApp = function () {
     return s;
   }
 
-  var state = { rows: [], sel: mkey(new Date()), end: mkey(new Date()), pop: null, detail: null, loaded: false, canWrite: null, me: '', db: null, user: null, armed: null };
+  var state = { rows: [], sel: mkey(new Date()), end: mkey(new Date()), pop: null, detail: null, showAll: false, loaded: false, canWrite: null, me: '', db: null, user: null, armed: null };
   var loadTimer = null;
 
   function setStatus(msg, kind) {
@@ -645,6 +648,7 @@ window.startApp = function () {
       b.appendChild(el('span', 'bm', fShort.format(parseM(k)).replace('.', '')));
       b.addEventListener('click', function () {
         state.pop = state.pop === k ? null : k;
+        if (k !== state.sel) state.showAll = false;
         state.sel = k;
         render();
         var nb = $('bars').querySelector('[data-k="' + k + '"]');
@@ -655,12 +659,16 @@ window.startApp = function () {
   }
 
   function renderList() {
-    var rows = state.rows.filter(function (r) { return r.month === state.sel; }).sort(function (a, b) {
+    var all = state.rows.filter(function (r) { return r.month === state.sel; }).sort(function (a, b) {
       if (a.date !== b.date) return a.date < b.date ? 1 : -1;
       return b.createdAt - a.createdAt;
     });
     var mn = fMonth.format(parseM(state.sel));
-    $('listTitle').textContent = 'Gastos de ' + mn;
+    var today = ymd(new Date());
+    var collapsible = state.sel === mkey(new Date());
+    var collapsed = collapsible && !state.showAll;
+    var rows = collapsed ? all.filter(function (r) { return r.date === today; }) : all;
+    $('listTitle').textContent = collapsed ? 'Gastos de hoy' : 'Gastos de ' + mn;
     $('listCount').textContent = rows.length ? rows.length + (rows.length === 1 ? ' registro' : ' registros') : '';
     var ul = $('rows');
     ul.textContent = '';
@@ -701,9 +709,23 @@ window.startApp = function () {
       empty.hidden = true;
     } else {
       empty.hidden = false;
-      empty.textContent = state.loaded
-        ? 'Aún no hay gastos en ' + mn + '.' + (state.canWrite === false ? '' : ' Toca el botón + para registrar el primero.')
-        : 'Cargando gastos…';
+      empty.textContent = !state.loaded ? 'Cargando gastos…'
+        : (collapsed && all.length ? 'Hoy no hay gastos registrados.'
+        : 'Aún no hay gastos en ' + mn + '.' + (state.canWrite === false ? '' : ' Toca el botón + para registrar el primero.'));
+    }
+    var more = $('moreBtn');
+    var rest = all.length - rows.length;
+    var canCollapse = collapsible && state.showAll && all.some(function (r) { return r.date !== today; });
+    if (collapsed && rest > 0) {
+      more.hidden = false;
+      more.textContent = 'Mostrar más';
+      more.setAttribute('aria-label', 'Mostrar más: ' + rest + (rest === 1 ? ' gasto más del mes' : ' gastos más del mes'));
+    } else if (canCollapse) {
+      more.hidden = false;
+      more.textContent = 'Mostrar menos';
+      more.setAttribute('aria-label', 'Mostrar solo los gastos de hoy');
+    } else {
+      more.hidden = true;
     }
   }
 
@@ -1084,6 +1106,7 @@ window.startApp = function () {
 
   function goMonth(k) {
     state.sel = k;
+    state.showAll = false;
     if (k > state.end || k < shiftM(state.end, -5)) state.end = k;
     state.pop = null;
     render();
@@ -1113,6 +1136,10 @@ window.startApp = function () {
   window.addEventListener('resize', function () { if (state.pop) render(); });
 
   $('addCard').addEventListener('click', openAdd);
+  $('moreBtn').addEventListener('click', function () {
+    state.showAll = !state.showAll;
+    render();
+  });
   $('detailScrim').addEventListener('click', function (e) {
     if (e.target === $('detailScrim')) closeDetail();
   });
@@ -1247,6 +1274,7 @@ window.startApp = function () {
       createdAt: Date.now()
     }).then(function () {
       state.sel = date.slice(0, 7);
+      if (date !== ymd(new Date())) state.showAll = true;
       $('concept').value = '';
       $('amount').value = '';
       $('desc').value = '';
@@ -1333,26 +1361,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-// ===== PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE =====
-// Firebase Console > Configuración del proyecto > Tus apps > Web > "Configuración del SDK"
-// Import the functions you need from the SDKs you need
-// import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBehhlMNBMk7h5efEgdE0zp3zs7ndjLNFE",
-  authDomain: "registro-de-gastos-69e75.firebaseapp.com",
-  projectId: "registro-de-gastos-69e75",
-  storageBucket: "registro-de-gastos-69e75.firebasestorage.app",
-  messagingSenderId: "1074864140055",
-  appId: "1:1074864140055:web:dfe35a1a7095dd304b5152"
+// La configuración de Firebase va en el archivo firebase-config.js, junto a este index.html.
+// Si ese archivo no existe, se usan estos valores de ejemplo y la página pedirá la configuración.
+let firebaseConfig = {
+  apiKey: "PEGA_AQUI_TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO",
+  appId: "PEGA_AQUI_TU_APP_ID"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// ===================================================
+try {
+  const cfg = await import('./firebase-config.js');
+  if (cfg && cfg.default) firebaseConfig = cfg.default;
+} catch (e) { /* sin archivo de configuración */ }
 
 const $ = (id) => document.getElementById(id);
 const mainEl = document.querySelector('main');
@@ -1367,7 +1387,7 @@ function showGate(msg, opts) {
 }
 
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('PEGA') === 0) {
-  showGate('Falta la configuración de Firebase. Abre public/index.html y pega tu firebaseConfig al principio del bloque de script.', { hideSignIn: true });
+  showGate('Falta la configuración de Firebase. Crea el archivo firebase-config.js junto a index.html con tu configuración.', { hideSignIn: true });
 } else {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
