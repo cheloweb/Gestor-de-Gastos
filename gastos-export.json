@@ -1,0 +1,11 @@
+[
+  {"id": "0s8cm42ld2xo773up6qc", "concept": "Super", "cents": 5700, "date": "2026-11-02", "month": "2026-11", "description": "Consum", "createdAt": 1793654619405},
+  {"id": "0tm9d7yhh9yc1h8msv4f", "concept": "Alquiler", "cents": 265200, "date": "2026-11-02", "month": "2026-11", "description": "Noviembre", "createdAt": 1793655232036},
+  {"id": "1r294be5r3uzj8pex846", "concept": "Iberdrola", "cents": 18000, "date": "2026-11-01", "month": "2026-11", "description": "", "createdAt": 1793446979893},
+  {"id": "7vijujr0djww0fm1q2mw", "concept": "Parking", "cents": 495, "date": "2026-11-02", "month": "2026-11", "description": "", "createdAt": 1793702717824},
+  {"id": "d0ig3lfhlfswhl9vsr8z", "concept": "DKV", "cents": 28000, "date": "2026-11-01", "month": "2026-11", "description": "Seguro Salud", "createdAt": 1793446963368},
+  {"id": "izu5gpnsjr4i3kvapmca", "concept": "Limpieza", "cents": 6000, "date": "2026-11-03", "month": "2026-11", "description": "Claudia", "createdAt": 1793713242496},
+  {"id": "kavg3z2ta3welwogji1o", "concept": "Colegio El Valle", "cents": 118000, "date": "2026-11-02", "month": "2026-11", "description": "Cuota mensual", "createdAt": 1793653297781},
+  {"id": "mih01o0prnjfjw90eq0u", "concept": "Estanco", "cents": 1200, "date": "2026-11-02", "month": "2026-11", "description": "", "createdAt": 1793654631119},
+  {"id": "p2dwoks33hzth7x4lvtm", "concept": "Parking", "cents": 595, "date": "2026-11-03", "month": "2026-11", "description": "", "createdAt": 1793724233255}
+]

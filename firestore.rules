@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo estos correos (cuentas de Google verificadas) pueden leer y escribir.
+    // Sustituye los dos correos antes de desplegar.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'cheloweb@gmail.com',
+          'vero.milab@gmail.com'
+        ];
+    }
+
+    function valid(d) {
+      return d.keys().hasAll(['concept', 'cents', 'date', 'month', 'createdAt'])
+        && d.keys().hasOnly(['concept', 'cents', 'date', 'month', 'description', 'by', 'byName', 'createdAt'])
+        && d.concept is string && d.concept.size() > 0 && d.concept.size() <= 80
+        && d.cents is int && d.cents > 0 && d.cents <= 1000000000
+        && d.date is string && d.date.size() == 10
+        && d.month is string && d.month.size() == 7
+        && d.createdAt is number
+        && (!('description' in d) || (d.description is string && d.description.size() <= 200))
+        && (!('by' in d) || (d.by is string && d.by.size() <= 128))
+        && (!('byName' in d) || (d.byName is string && d.byName.size() <= 100));
+    }
+
+    match /expenses/{id} {
+      allow read, delete: if allowed();
+      allow create, update: if allowed() && valid(request.resource.data);
+    }
+  }
+}
