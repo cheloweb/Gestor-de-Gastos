@@ -404,6 +404,14 @@ input[type="date"]::-webkit-datetime-edit { padding: 0; }
 .savestate { margin-top: 4px; min-height: 16px; font-size: 12px; color: var(--muted); }
 .more { display: block; width: 100%; margin-top: 12px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer; }
 .more:hover { background: var(--accent-soft); }
+.detailactions { margin-top: 16px; display: flex; gap: 10px; }
+.btn2 { height: 44px; padding: 0 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer; }
+.btn2:hover { background: var(--accent-soft); }
+.editform { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.editform .f-concept, .editform .f-desc, .editform .err, .editform .editactions { grid-column: 1 / -1; }
+.editform .err { margin: 0; }
+.editactions { display: flex; gap: 10px; }
+.editactions .primary { flex: 1 1 auto; }
 .who { color: var(--muted); font-size: 13px; margin-top: 6px; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; font: inherit; cursor: pointer; }
 .gate { min-height: 70vh; display: grid; place-items: center; }
@@ -568,7 +576,7 @@ window.startApp = function () {
     return s;
   }
 
-  var state = { rows: [], sel: mkey(new Date()), end: mkey(new Date()), pop: null, detail: null, showAll: false, loaded: false, canWrite: null, me: '', db: null, user: null, armed: null };
+  var state = { rows: [], sel: mkey(new Date()), end: mkey(new Date()), pop: null, detail: null, showAll: false, detailEdit: false, loaded: false, canWrite: null, me: '', db: null, user: null, armed: null };
   var loadTimer = null;
 
   function setStatus(msg, kind) {
@@ -849,7 +857,7 @@ window.startApp = function () {
         if (v === last) return;
         if (!state.db) { st.textContent = 'Sin conexión con los datos compartidos.'; return; }
         st.textContent = 'Guardando…';
-        return state.db.doc('expenses/' + r.id).update({ description: v }).then(function () {
+        return state.db.doc('expenses/' + r.id).update({ description: v, updatedAt: Date.now() }).then(function () {
           last = v;
           st.textContent = 'Guardado';
         }).catch(function () {
@@ -881,6 +889,139 @@ window.startApp = function () {
     ta.setSelectionRange(ta.value.length, ta.value.length);
   }
 
+  function exitEdit() {
+    state.detailEdit = false;
+    render();
+  }
+
+  function buildEditForm(box, scrim, r) {
+    box.textContent = '';
+    var head = el('div', 'pophead');
+    head.appendChild(el('div', 'dtitle', 'Editar gasto'));
+    var x = el('button', 'popx', '×');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Cancelar edición');
+    x.addEventListener('click', exitEdit);
+    head.appendChild(x);
+    box.appendChild(head);
+
+    var form = el('form', 'editform');
+    form.id = 'editForm';
+    form.noValidate = true;
+    var field = function (cls, id, label, control) {
+      var f = el('div', 'f ' + cls);
+      var lb = el('label', '', label);
+      lb.setAttribute('for', id);
+      f.appendChild(lb);
+      f.appendChild(control);
+      return f;
+    };
+
+    var cWrap = el('div');
+    var cIn = el('input');
+    cIn.id = 'eConcept';
+    cIn.type = 'text';
+    cIn.maxLength = 80;
+    cIn.autocomplete = 'off';
+    cIn.value = r.concept;
+    cIn.setAttribute('list', 'eConceptList');
+    var dlist = el('datalist');
+    dlist.id = 'eConceptList';
+    conceptOptions().forEach(function (o) {
+      var op = el('option');
+      op.value = o.name;
+      dlist.appendChild(op);
+    });
+    cWrap.appendChild(cIn);
+    cWrap.appendChild(dlist);
+
+    var aWrap = el('div', 'money');
+    var aIn = el('input');
+    aIn.id = 'eAmount';
+    aIn.type = 'text';
+    aIn.setAttribute('inputmode', 'decimal');
+    aIn.autocomplete = 'off';
+    aIn.value = (r.cents / 100).toFixed(2).replace('.', ',');
+    aWrap.appendChild(aIn);
+    var eur = el('span', 'eur', '€');
+    eur.setAttribute('aria-hidden', 'true');
+    aWrap.appendChild(eur);
+
+    var dIn = el('input');
+    dIn.id = 'eDate';
+    dIn.type = 'date';
+    dIn.value = r.date;
+
+    var sIn = el('input');
+    sIn.id = 'eDesc';
+    sIn.type = 'text';
+    sIn.maxLength = 200;
+    sIn.autocomplete = 'off';
+    sIn.value = r.desc;
+    sIn.placeholder = 'Detalle, nota, número de factura…';
+
+    var err = el('p', 'err');
+    err.id = 'eErr';
+    err.setAttribute('role', 'alert');
+    err.hidden = true;
+    var showErr = function (m) { err.textContent = m || ''; err.hidden = !m; };
+
+    var acts = el('div', 'editactions');
+    var save = el('button', 'primary', 'Guardar cambios');
+    save.type = 'submit';
+    save.id = 'eSave';
+    var cancel = el('button', 'btn2', 'Cancelar');
+    cancel.type = 'button';
+    cancel.addEventListener('click', exitEdit);
+    acts.appendChild(save);
+    acts.appendChild(cancel);
+
+    form.appendChild(field('f-concept', 'eConcept', 'Concepto', cWrap));
+    form.appendChild(field('f-amount', 'eAmount', 'Importe', aWrap));
+    form.appendChild(field('f-date', 'eDate', 'Fecha', dIn));
+    form.appendChild(field('f-desc', 'eDesc', 'Descripción (opcional)', sIn));
+    form.appendChild(err);
+    form.appendChild(acts);
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var concept = cIn.value.trim();
+      var amount = parseAmount(aIn.value);
+      var date = dIn.value;
+      var desc = sIn.value.trim();
+      if (!concept) { showErr('Escribe un concepto.'); cIn.focus(); return; }
+      if (!(amount > 0) || amount > 10000000) { showErr('Escribe un importe mayor que 0, por ejemplo 12,50.'); aIn.focus(); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showErr('Elige una fecha.'); dIn.focus(); return; }
+      var cents = Math.round(amount * 100);
+      var patch = {};
+      if (concept !== r.concept) patch.concept = concept;
+      if (cents !== r.cents) patch.cents = cents;
+      if (date !== r.date) { patch.date = date; patch.month = date.slice(0, 7); }
+      if (desc !== r.desc) patch.description = desc;
+      if (!Object.keys(patch).length) { exitEdit(); return; }
+      if (!state.db) { showErr('Todavía no hay conexión con los datos compartidos. Espera unos segundos e inténtalo de nuevo.'); return; }
+      patch.updatedAt = Date.now();
+      save.disabled = true;
+      state.db.doc('expenses/' + r.id).update(patch).then(function () {
+        if (patch.month) {
+          state.sel = patch.month;
+          if (patch.month > state.end || patch.month < shiftM(state.end, -5)) state.end = patch.month;
+        }
+        if (date !== ymd(new Date())) state.showAll = true;
+        state.detailEdit = false;
+        render();
+      }).catch(function () {
+        showErr('No se pudo guardar los cambios. Inténtalo de nuevo.');
+        save.disabled = false;
+      });
+    });
+
+    box.appendChild(form);
+    scrim.hidden = false;
+    syncLock();
+    cIn.focus();
+  }
+
   function openDetail(id) {
     state.detail = id;
     render();
@@ -905,8 +1046,14 @@ window.startApp = function () {
     if (!r) {
       state.detail = null;
       state.editDesc = false;
+      state.detailEdit = false;
       box.textContent = '';
       if (!scrim.hidden) { scrim.hidden = true; syncLock(); }
+      return;
+    }
+    if (state.detailEdit) {
+      if (!scrim.hidden && box.querySelector('#editForm')) return;
+      buildEditForm(box, scrim, r);
       return;
     }
     if (state.editDesc && !scrim.hidden && box.querySelector('textarea')) return;
@@ -947,7 +1094,17 @@ window.startApp = function () {
     }
     if (r.by) add('Registrado por', byNode(r.by));
     if (r.createdAt > 1e12) add('Registrado el', document.createTextNode(fStamp.format(new Date(r.createdAt))));
+    if (r.updatedAt > 1e12) add('Modificado el', document.createTextNode(fStamp.format(new Date(r.updatedAt))));
+    else add('Modificado el', document.createTextNode('Sin modificaciones'), true);
     box.appendChild(dl);
+    if (state.canWrite !== false) {
+      var actions = el('div', 'detailactions');
+      var editBtn = el('button', 'btn2', 'Editar gasto');
+      editBtn.type = 'button';
+      editBtn.addEventListener('click', function () { state.detailEdit = true; render(); });
+      actions.appendChild(editBtn);
+      box.appendChild(actions);
+    }
 
     scrim.hidden = false;
     syncLock();
@@ -1124,6 +1281,7 @@ window.startApp = function () {
     if (b) b.focus();
   });
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && state.detailEdit) { exitEdit(); return; }
     if (e.key === 'Escape' && !$('detailScrim').hidden) { closeDetail(); return; }
     if (e.key === 'Escape' && !$('addScrim').hidden) { closeAdd(true); return; }
     if (e.key !== 'Escape' || !state.pop) return;
@@ -1141,7 +1299,7 @@ window.startApp = function () {
     render();
   });
   $('detailScrim').addEventListener('click', function (e) {
-    if (e.target === $('detailScrim')) closeDetail();
+    if (e.target === $('detailScrim') && !state.detailEdit) closeDetail();
   });
   $('addX').addEventListener('click', function () { closeAdd(true); });
   $('addScrim').addEventListener('click', function (e) {
@@ -1337,6 +1495,7 @@ window.startApp = function () {
             month: String(x.month || date.slice(0, 7)),
             by: String(x.by || ''),
             desc: String(x.description || ''),
+            updatedAt: Number(x.updatedAt) || 0,
             createdAt: Number(x.createdAt) || 0
           };
         }).filter(function (r) { return r.cents > 0 && /^\d{4}-\d{2}$/.test(r.month); });
