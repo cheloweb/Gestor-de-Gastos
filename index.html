@@ -30,6 +30,8 @@ img{max-width:100%}
   --c4: #C2477A;
   --c5: #7A9E2E;
   --c6: #8A5FB8;
+  --c7: #B5493A;
+  --c8: #2E8FC9;
   --cother: #9AAAA8;
   --scrim: rgba(19, 32, 31, 0.38);
   --font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -53,6 +55,8 @@ img{max-width:100%}
     --c4: #EE86AE;
     --c5: #A9CC5B;
     --c6: #B895E0;
+    --c7: #E07B6A;
+    --c8: #5EB5E8;
     --cother: #5F7270;
     --scrim: rgba(0, 0, 0, 0.58);
     color-scheme: dark;
@@ -75,6 +79,8 @@ img{max-width:100%}
   --c4: #EE86AE;
   --c5: #A9CC5B;
   --c6: #B895E0;
+  --c7: #E07B6A;
+  --c8: #5EB5E8;
   --cother: #5F7270;
   --scrim: rgba(0, 0, 0, 0.58);
   color-scheme: dark;
@@ -758,7 +764,7 @@ window.startApp = function () {
     });
   }
 
-  var SLICE_MAX = 6;
+  var SLICE_MAX = 8;
 
   function breakdown(k) {
     var map = Object.create(null), order = [];
